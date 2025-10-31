@@ -18,11 +18,44 @@
 
     // Import all banner images
     const banners = import.meta.glob('./assets/banners/*.gif', { eager: true, query: '?url', import: 'default' })
+    const bannerList = Object.keys(banners)
     
     let bannerUrl = $derived(settings.banner && banners[`./assets/banners/${settings.banner}`])
+    let isFlipping = $state(false)
     
     let showGithubWidget = $derived(settings.showGithub && settings.githubUsername && settings.githubToken)
     let showMusicWidget = $derived(settings.showMusic && settings.musicService && settings.musicToken)
+    
+    function changeBannerRandomly() {
+        if (isFlipping) return // Prevent multiple clicks during animation
+        
+        // Get current banner filename
+        const currentBanner = settings.banner
+        
+        // Filter out current banner from the list
+        const availableBanners = bannerList
+            .map(path => path.replace('./assets/banners/', ''))
+            .filter(name => name !== currentBanner)
+        
+        if (availableBanners.length === 0) return
+        
+        // Pick random banner
+        const randomIndex = Math.floor(Math.random() * availableBanners.length)
+        const newBanner = availableBanners[randomIndex]
+        
+        // Trigger flip animation
+        isFlipping = true
+        
+        // Change banner mid-flip
+        setTimeout(() => {
+            settings.banner = newBanner
+        }, 300) // Half of the flip animation duration
+        
+        // Reset flip state
+        setTimeout(() => {
+            isFlipping = false
+        }, 600) // Full animation duration
+    }
 
     function getGreeting() {
         const hour = new Date().getHours()
@@ -52,7 +85,16 @@
                         {greeting}, {settings.greetingName}
                     </div>
                 {/if}
-                <div class="banner-container" class:banner-only={!showGithubWidget && !showMusicWidget}>
+                <div 
+                    class="banner-container" 
+                    class:banner-only={!showGithubWidget && !showMusicWidget}
+                    class:flipping={isFlipping}
+                    onclick={changeBannerRandomly}
+                    role="button"
+                    tabindex="0"
+                    onkeydown={(e) => e.key === 'Enter' || e.key === ' ' ? changeBannerRandomly() : null}
+                    aria-label="Click to change banner"
+                >
                     <img src={bannerUrl} alt="Banner" class="banner" />
                     {#if settings.bannerText}
                         <div class="banner-text-overlay" class:blurred={settings.bannerTextBlur}>
@@ -130,7 +172,24 @@
         display: flex;
         align-items: center;
         position: relative;
+        cursor: pointer;
+        transform-style: preserve-3d;
+        transition: transform 0.6s ease;
     }
+    
+    .banner-container.flipping {
+        animation: flipCard 0.6s ease-in-out;
+    }
+    
+    .banner-container:hover {
+        opacity: 0.95;
+    }
+    
+    .banner-container:focus {
+        outline: 2px solid var(--txt-3);
+        outline-offset: 4px;
+    }
+    
     .banner {
         max-height: 400px;
         max-width: 350px;
@@ -192,5 +251,17 @@
     }
     .settings-btn:hover {
         opacity: 1;
+    }
+    
+    @keyframes flipCard {
+        0% {
+            transform: rotateY(0deg);
+        }
+        50% {
+            transform: rotateY(90deg);
+        }
+        100% {
+            transform: rotateY(0deg);
+        }
     }
 </style>
