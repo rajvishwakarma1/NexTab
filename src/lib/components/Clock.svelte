@@ -20,8 +20,9 @@
     let timerTotalDuration = $state(0) // Total duration in seconds
     let timerProgress = $state(0) // Progress from 0-100
     let showTimerEndMessage = $state(false) // Show timer end overlay
+    let dayProgress = $state(0) // Daily progress (0-100, representing 24 hours)
 
-    const timerPresets = [5, 10, 15, 30, 45]
+    const timerPresets = [5, 10, 15, 20, 30, 45, 60]
     
     const TIMER_STORAGE_KEY = 'startpage-timer-state'
 
@@ -113,6 +114,11 @@
                 day: 'numeric',
             })
             .toLowerCase()
+        
+        // Calculate daily progress (0-100 based on time of day)
+        const totalSecondsInDay = 24 * 60 * 60
+        const secondsSinceMidnight = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()
+        dayProgress = Math.floor((secondsSinceMidnight / totalSecondsInDay) * 100)
     }
 
     function startClock() {
@@ -269,15 +275,32 @@
                 </div>
             </div>
         {:else}
-            <div class="clock">
-                {currentHrs}<span class="colon">:</span>{currentMin}<span
-                    class="colon">:</span
-                >{currentSec}
-                {#if settings.timeFormat === '12hr'}
-                    <span class="ampm">{currentAmPm}</span>
-                {/if}
+            <div class="datetime-layout">
+                <div class="datetime-info">
+                    <div class="clock">
+                        {currentHrs}<span class="colon">:</span>{currentMin}<span
+                            class="colon">:</span
+                        >{currentSec}
+                        {#if settings.timeFormat === '12hr'}
+                            <span class="ampm">{currentAmPm}</span>
+                        {/if}
+                    </div>
+                    <div class="date">{currentDate}</div>
+                </div>
+                
+                <!-- Daily Progress Heatmap (10x10 = 100 cells for 24 hours) -->
+                <div class="daily-progress-grid">
+                    {#each Array(10) as _, rowIndex}
+                        <div class="progress-row">
+                            {#each Array(10) as _, colIndex}
+                                {@const cellNumber = rowIndex * 10 + colIndex + 1}
+                                {@const isFilled = cellNumber <= dayProgress}
+                                <div class="progress-cell {isFilled ? 'filled' : ''}"></div>
+                            {/each}
+                        </div>
+                    {/each}
+                </div>
             </div>
-            <div class="date">{currentDate}</div>
         {/if}
     </div>
 </div>
@@ -351,6 +374,26 @@
     .stop-timer-btn:hover {
         background: var(--bg-3);
         color: var(--txt-1);
+    }
+    
+    .datetime-layout {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+        justify-content: center;
+    }
+    
+    .datetime-info {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .daily-progress-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        animation: fadeIn 0.3s ease-in;
     }
     
     .timer-layout {
